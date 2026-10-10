@@ -1,0 +1,29 @@
+{
+  "name": "qrx-zapier",
+  "version": "1.0.0",
+  "description": "QRX integration for Zapier: make branded QR codes that are checked to scan, from any Zap.",
+  "main": "index.js",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint . && prettier --check .",
+    "test": "jest --runInBand",
+    "validate": "zapier-platform validate",
+    "format": "prettier --write ."
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "zapier-platform-core": "19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.12.0",
+    "globals": "17.13.0",
+    "jest": "30.5.2",
+    "nock": "14.0.17",
+    "prettier": "3.9.10",
+    "zapier-platform-cli": "19.2.0"
+  }
+}
