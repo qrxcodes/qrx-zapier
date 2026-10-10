@@ -61,6 +61,15 @@ Run the commands from a clone of this repo after `npm ci`. Nothing here needs to
 16. **Review and beta.** Zapier replies in about a week. Once approved, the integration is in beta for 90 days and then
     goes public on its own.
 
+On Windows, `push` can fail copying the project (`EPERM` on `.git` objects, then `EMFILE`). Push from a clean export
+with only runtime dependencies instead:
+
+```sh
+git archive HEAD | tar -x -C ../qrx-zapier-push && cd ../qrx-zapier-push
+npm ci --omit=dev
+npx zapier-platform-cli@19.2.0 push
+```
+
 Later versions: bump `version` in `package.json`, `npx zapier-platform push`, copy the environment with
 `npx zapier-platform env:set <new version> …`, then `npx zapier-platform promote <new version>` and
 `npx zapier-platform migrate <old version> <new version>`.
