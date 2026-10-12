@@ -35,9 +35,9 @@ Run the commands from a clone of this repo after `npm ci`. Nothing here needs to
      QRX_BASE_URL=https://dev.qrx.codes QRX_OAUTH_URL=https://summary-bobcat-19.clerk.accounts.dev
    ```
 7. **Try it on dev.** In Zapier, connect a dev QRX account and make a Zap with Create QR Code followed by a step that
-   uses the image file (for example, email it to yourself). Check the code arrives with its image. Then replay the
-   Create QR Code run from the Zap history and check on dev that no second code was made; tell the API agent either
-   way (whether Zapier reuses the callback URL on a replay is not documented).
+   uses the image file (for example, email it to yourself). Check the code arrives with its image. Replaying the
+   Create QR Code run from the Zap history makes a new code: Zapier gives the replayed step a new callback URL, so
+   the idempotency key differs (tested on dev, 11 Oct 2026).
 8. **Prod Clerk app.** In the production Clerk dashboard (`clerk.qrx.codes`), create the OAuth application
    "QRX for Zapier": confidential (with a secret), PKCE required, consent screen on, scopes
    `qrx:read qrx:generate offline_access`, redirect URI from step 4.
