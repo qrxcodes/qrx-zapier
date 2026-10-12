@@ -73,3 +73,14 @@ npx zapier-platform-cli@19.2.0 push
 Later versions: bump `version` in `package.json`, `npx zapier-platform push`, copy the environment with
 `npx zapier-platform env:set <new version> …`, then `npx zapier-platform promote <new version>` and
 `npx zapier-platform migrate <old version> <new version>`.
+
+## Testing notes
+
+Learned while testing on dev (October 2026):
+
+- The editor's **Test step** returns the sample data (`bundle.meta.isLoadingSample`) and makes no code. Run the Zap
+  itself to make a real one.
+- A free Zapier account allows two-step Zaps only, so a test Zap with a trigger, Create QR Code and a step that uses the
+  image needs a paid Zapier plan.
+- Zapier Tables has no image field, so a Tables step can hold the code's image URL and short link but not show the
+  image itself.
