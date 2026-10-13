@@ -78,8 +78,15 @@ Later versions: bump `version` in `package.json`, `npx zapier-platform push`, co
 
 Learned while testing on dev (October 2026):
 
-- The editor's **Test step** returns the sample data (`bundle.meta.isLoadingSample`) and makes no code. Run the Zap
-  itself to make a real one.
+- From 1.0.1, the editor's **Test step** for Create QR Code makes a real code from the step's prompt, link and style
+  (`bundle.meta.isLoadingSample`), and it counts against the account's allowance. It does not use the callback: it
+  calls `POST /v1/codes?wait=` and waits up to 25 seconds, inside Zapier's 30-second step limit. A code that finishes
+  in time comes back with its image file; one that does not comes back as `processing`, with its real id, short link
+  and page but no image, and finishes on its page. A Zap run still uses the callback and waits for the image. In 1.0.0
+  the Test step returned the static sample and made no code.
+- Testing Change QR Code Link changes the chosen code's link for real; the step says so. Testing Find QR Code and New
+  QR Code reads the account's real codes. The static `sample` in each definition only shows where Zapier has no data
+  of its own, such as before a test.
 - A free Zapier account allows two-step Zaps only, so a test Zap with a trigger, Create QR Code and a step that uses the
   image needs a paid Zapier plan.
 - Zapier Tables has no image field, so a Tables step can hold the code's image URL and short link but not show the

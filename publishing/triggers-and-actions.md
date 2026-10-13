@@ -1,7 +1,11 @@
 # Triggers, actions and searches
 
 As defined in the code (`triggers/`, `creates/`, `searches/`). The noun is **QR Code** throughout. Each operation has a
-sample, which Zapier shows when a Zap is set up and the user has no data yet.
+sample, which Zapier shows when a Zap is set up and the user has no data yet. Testing a step in the editor uses real
+data: New QR Code and Find QR Code read the account's codes, Create QR Code makes a code and Change QR Code Link
+changes a code's link.
+
+The `(note)` rows are `copy` fields: text shown in the step, with no value.
 
 The two hidden triggers, `style_list` and `code_list`, only fill dropdowns and are not listed.
 
@@ -21,15 +25,20 @@ The two hidden triggers, `style_list` and `code_list`, only fill dropdowns and a
 |---|---|
 | Noun | QR Code |
 | Label | Create QR Code |
-| Description | Creates a branded QR code from a picture prompt and a link. Each code is checked to scan before it is delivered. |
+| Description | Creates a branded QR code from a picture prompt and a link. Each code is checked to scan before it is delivered. Testing this step makes a real code. |
 
 | Input | Label | Required | Help text |
 |---|---|---|---|
+| `test_note` | (note) | No | **Test step makes a real code** from these fields, and it counts against your QRX allowance like any other code. The test waits up to 25 seconds: if the code is not finished by then, it shows as `processing` with its short link and page but no image yet, and the image fills in on its page. When the Zap runs, this step waits for the finished code and its image. |
 | `prompt` | Picture Prompt | Yes | What the picture should show, in a sentence. For example: "A lighthouse on a cliff at sunset". Up to 1,000 characters. |
 | `destination` | Link | Yes | Where scans go: a full web address starting with `https://` or `http://`. The code encodes a short qrx.to link that sends people here. |
 | `style` | Style | No | A picture style. Leave empty to let the prompt decide. (Dropdown of QRX's styles.) |
 
-The step waits for the code to finish (about a minute) and then passes the finished code on.
+In a Zap run, the step waits for the code to finish (about a minute) and then passes the finished code on.
+
+The editor's **Test step** makes a real code from the fields above, which counts against the account's allowance. It
+waits up to 25 seconds: a code that finishes in time comes back finished, with its image file; otherwise it comes back
+with `status` `processing`, its real id, short link and page URL, and empty `imageUrl`, `image` and `completedAt`.
 
 ## Action: Change QR Code Link (`change_code_link`)
 
@@ -37,10 +46,11 @@ The step waits for the code to finish (about a minute) and then passes the finis
 |---|---|
 | Noun | QR Code |
 | Label | Change QR Code Link |
-| Description | Changes where an existing QR code sends people, on a paid plan. Printed codes follow the new link at once. |
+| Description | Changes where an existing QR code sends people, on a paid plan. Printed codes follow the new link at once. Testing this step changes the link too. |
 
 | Input | Label | Required | Help text |
 |---|---|---|---|
+| `test_note` | (note) | No | **Test step changes the code's link for real**, on a paid plan: printed codes follow the new link at once. Test with a code you are happy to point at the new link. |
 | `id` | QR Code | Yes | The code whose link to change, on a paid plan. Pick one, or map a code id or short link from an earlier step. (Dropdown of the account's codes; can also use Find QR Code.) |
 | `destination` | New Link | Yes | Where scans go from now on: a full web address starting with `https://` or `http://`. Changing a code's link is on a paid plan. |
 

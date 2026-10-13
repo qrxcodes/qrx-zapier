@@ -1,6 +1,6 @@
 {
   "name": "qrx-zapier",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "QRX integration for Zapier: make branded QR codes that are checked to scan, from any Zap.",
   "main": "index.js",
   "private": true,

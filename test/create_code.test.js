@@ -143,9 +143,18 @@ describe('Create QR Code', () => {
       await expect(appTester(op.perform, { authData, inputData })).rejects.toThrow(/Still running/);
     });
 
-    it('returns the sample in the Zap editor without making a code', async () => {
-      const result = await appTester(op.perform, { authData, inputData, meta: { isLoadingSample: true } });
-      expect(result).toEqual(op.sample);
+    it('sends a run without a wait, so the callback delivers the code', async () => {
+      let query;
+      nock(API)
+        .post('/v1/codes')
+        .query((q) => {
+          query = q;
+          return true;
+        })
+        .reply(202, processing());
+
+      await appTester(op.perform, { authData, inputData });
+      expect(query).toEqual({});
     });
 
     it('explains a used-up daily allowance without naming plans or prices', async () => {
@@ -202,6 +211,167 @@ describe('Create QR Code', () => {
 
       const error = await appTester(op.perform, { authData, inputData }).catch((e) => e);
       expect(error.name).toBe('RefreshAuthError');
+    });
+  });
+
+  describe('Test step (isLoadingSample)', () => {
+    const meta = { isLoadingSample: true };
+    const testInput = { prompt: 'October in Perth Australia', destination: 'https://qrx.codes' };
+    const made = (overrides = {}) =>
+      code({ id: 'p3rth9', prompt: testInput.prompt, destination: testInput.destination, ...overrides });
+    const madeProcessing = (overrides = {}) =>
+      made({ status: 'processing', imageUrl: null, completedAt: null, ...overrides });
+
+    it('makes a real code from the inputs and returns it finished when it finishes within the wait', async () => {
+      let sentBody;
+      let sentKey;
+      let sentWait;
+      nock(API, { reqheaders: { authorization: 'Bearer test-access-token' } })
+        .post('/v1/codes', (body) => {
+          sentBody = body;
+          return true;
+        })
+        .query((q) => {
+          sentWait = Number(q.wait);
+          return true;
+        })
+        .reply(201, function () {
+          sentKey = this.req.headers['idempotency-key'];
+          return made({
+            shortUrl: 'https://qrx.to/p3rth9',
+            pageUrl: 'https://qrx.codes/view/p3rth9',
+            imageUrl: 'https://qrx.codes/media/premium/p3rth9.png',
+          });
+        });
+
+      const result = await appTester(op.perform, { authData, inputData: { ...testInput, style: 'a64c5' }, meta });
+
+      expect(sentBody).toEqual({ ...testInput, style: 'a64c5' });
+      expect(sentBody).not.toHaveProperty('callbackUrl');
+      expect(sentWait).toBeGreaterThanOrEqual(24);
+      expect(sentWait).toBeLessThanOrEqual(25);
+      expect(sentKey).toMatch(/^zapier-test-[0-9a-f-]{36}$/);
+      expect(result).toMatchObject({
+        id: 'p3rth9',
+        status: 'succeeded',
+        prompt: 'October in Perth Australia',
+        destination: 'https://qrx.codes',
+        shortUrl: 'https://qrx.to/p3rth9',
+        pageUrl: 'https://qrx.codes/view/p3rth9',
+        imageUrl: 'https://qrx.codes/media/premium/p3rth9.png',
+      });
+      expect(result.image).toMatch(/^hydrate\|\|\|.*downloadImage.*\|\|\|hydrate$/);
+      expect(Object.keys(result).sort()).toEqual(op.outputFields.map((f) => f.key).sort());
+      expect(result).not.toEqual(op.sample);
+    });
+
+    it('returns the real code as processing, with no image, when the wait runs out', async () => {
+      nock(API)
+        .post('/v1/codes')
+        .query(true)
+        .reply(202, madeProcessing({ shortUrl: 'https://qrx.to/p3rth9', pageUrl: 'https://qrx.codes/view/p3rth9' }));
+
+      const result = await appTester(op.perform, { authData, inputData: testInput, meta });
+
+      expect(result).toMatchObject({
+        id: 'p3rth9',
+        status: 'processing',
+        prompt: 'October in Perth Australia',
+        shortUrl: 'https://qrx.to/p3rth9',
+        pageUrl: 'https://qrx.codes/view/p3rth9',
+        imageUrl: null,
+        image: null,
+        completedAt: null,
+      });
+      expect(Object.keys(result).sort()).toEqual(op.outputFields.map((f) => f.key).sort());
+    });
+
+    it('makes a new code on each test', async () => {
+      const keys = [];
+      nock(API)
+        .post('/v1/codes')
+        .query(true)
+        .times(2)
+        .reply(202, function () {
+          keys.push(this.req.headers['idempotency-key']);
+          return madeProcessing();
+        });
+
+      await appTester(op.perform, { authData, inputData: testInput, meta });
+      await appTester(op.perform, { authData, inputData: testInput, meta });
+      expect(keys[0]).not.toBe(keys[1]);
+    });
+
+    it('keeps the whole wait within the limit when the API asks it to retry', async () => {
+      const waits = [];
+      nock(API)
+        .post('/v1/codes')
+        .query((q) => {
+          waits.push(Number(q.wait));
+          return true;
+        })
+        .reply(409, problem('idempotency-in-progress', 409, 'Still running.'), {
+          ...PROBLEM_HEADERS,
+          'Retry-After': '1',
+        })
+        .post('/v1/codes')
+        .query((q) => {
+          waits.push(Number(q.wait));
+          return true;
+        })
+        .reply(202, madeProcessing());
+
+      const result = await appTester(op.perform, { authData, inputData: testInput, meta });
+      expect(result.status).toBe('processing');
+      expect(waits).toHaveLength(2);
+      expect(waits[1]).toBeLessThan(waits[0]);
+    });
+
+    it('fails the test when the code failed within the wait', async () => {
+      nock(API)
+        .post('/v1/codes')
+        .query(true)
+        .reply(201, made({ status: 'failed', imageUrl: null, error: { message: 'The picture did not scan.' } }));
+
+      const error = await appTester(op.perform, { authData, inputData: testInput, meta }).catch((e) => e);
+      expect(messageOf(error)).toMatch(/QRX could not make this code\. The picture did not scan\./);
+    });
+
+    it('shows the API error, such as a used-up allowance', async () => {
+      nock(API)
+        .post('/v1/codes')
+        .query(true)
+        .reply(429, problem('daily-limit', 429, 'No codes are left today.'), {
+          ...PROBLEM_HEADERS,
+          'Retry-After': '3600',
+        });
+
+      const error = await appTester(op.perform, { authData, inputData: testInput, meta }).catch((e) => e);
+      expect(messageOf(error)).toMatch(/No codes are left today on this QRX account/);
+    });
+
+    it('shows an invalid field', async () => {
+      nock(API)
+        .post('/v1/codes')
+        .query(true)
+        .reply(
+          400,
+          problem('invalid-request', 400, 'destination is invalid', {
+            errors: [{ field: 'destination', message: 'must be an http:// or https:// URL' }],
+          }),
+          PROBLEM_HEADERS,
+        );
+
+      await expect(
+        appTester(op.perform, { authData, inputData: { ...testInput, destination: 'nope' }, meta }),
+      ).rejects.toThrow(/destination must be an http:\/\/ or https:\/\/ URL/);
+    });
+
+    it('says in the step that testing makes a real code', () => {
+      const note = op.inputFields.find((f) => f.type === 'copy');
+      expect(note.helpText).toMatch(/Test step makes a real code/);
+      expect(note.helpText).toMatch(/allowance/);
+      expect(note.helpText).toMatch(/image fills in/);
     });
   });
 

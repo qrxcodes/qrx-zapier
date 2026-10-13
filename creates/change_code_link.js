@@ -20,10 +20,16 @@ module.exports = {
   display: {
     label: 'Change QR Code Link',
     description:
-      'Changes where an existing QR code sends people, on a paid plan. Printed codes follow the new link at once.',
+      'Changes where an existing QR code sends people, on a paid plan. Printed codes follow the new link at once. Testing this step changes the link too.',
   },
   operation: {
     inputFields: [
+      {
+        key: 'test_note',
+        type: 'copy',
+        helpText:
+          "**Test step changes the code's link for real**, on a paid plan: printed codes follow the new link at once. Test with a code you are happy to point at the new link.",
+      },
       {
         key: 'id',
         label: 'QR Code',
