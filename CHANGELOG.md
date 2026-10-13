@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Update create/create_code: Test step makes a real code from the step's prompt, link and style, and counts against the QRX allowance. It waits up to 25 seconds and returns the finished code with its image, or the code still processing, with its short link and page, if it takes longer. Zap runs are unchanged.
+- Update create/change_code_link: the step notes that testing it changes the code's link.
+
 ## 1.0.0
 
 Initial release to public.
